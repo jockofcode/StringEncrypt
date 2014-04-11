@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+print "What\'s the password?: "
+password = gets
+files = Dir::entries('.').collect {|entry| if File.file? entry then entry else nil end }.compact
+
+files.each { |file| `decrypt -i "#{file}" -o "#{file}" -p "#{password}" -z` }
