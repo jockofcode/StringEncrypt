@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+#
+# journal is a stand-alone program that
+# 1. decrypts the journal file using the private key that's been symetrically encrypted with a password.
+# 2. opens the decrypted journal file with vim
+# 3. then encrypts the edited file back with the public key
+
+if ARGV.length == 0 then
+	filename = "journal.txt"
+else
+	filename = ARGV[0]
+end
+if File.exists? filename then
+	system("decrypt -i rsa.priv -o tmp_priv.pem")
+	`decrypt -i #{filename} -o #{filename}.tmp -z -k tmp_priv.pem`
+	system "clear"
+	`rm tmp_priv.pem`
+	if File.exists? "#{filename}.tmp" then
+		`echo $(date) >> #{filename}.tmp`
+		system("vim #{filename}.tmp")
+		`encrypt -i #{filename}.tmp -o #{filename} -z -k rsa.pub`
+		`rm #{filename}.tmp`
+	else
+		puts "decryption failed"
+	end
+else
+	puts "file does not exists"
+end

@@ -1,0 +1,98 @@
+#!/usr/bin/env ruby
+#
+# decrypt.rb is a program for decrypting an individual file or piped input
+# using either a password or rsa key.  If the key is beyond the allowed size
+# for the contents being encrypted it is silently symmetrically encrypted 
+# with a random password and that random password is instead encrypted with
+# the rsa key
+#
+# USAGE:: decrypt ([-i input/filename] [-o output/filename] [(-k key/filename) || -p password || -p "pass phrase"]) || filename_changed_in_place
+#
+# -i:: Input file name
+# -o:: Output file name
+# -k:: RSA public or private key to encrypt with
+# -p:: a password or pass phrase to encrypt with
+#
+# If no input is specified then input is taken from STDIN so a password or key
+# must be provided at the time of invocation with the -k or -p options 
+# If not then an empty string is used for the password (NOT ADVISABLE)
+#
+# If no output is specified then the output is directed to STDOUT.  if no
+# password or key is provided you will be prompted for a password.
+#
+# If the input and output file are the same you can optionally pass the 
+# filename as the only parameter and then you will be prompted for a password
+require 'string-encrypt'
+require 'optparse'
+
+options = {}
+if ARGV.length == 1
+	options["infile"] = options["outfile"] = ARGV[0]
+else
+	OptionParser.new do |opts|
+		opts.banner = "Usage: decrypt.rb -i input.file -o output.file"
+		opts.on("-i", "--infile INPUT", "File to be encrypted") do |input|
+			options["infile"] = input.gsub("\"","")
+		end
+	
+		opts.on("-o", "--outfile OUTPUT", "File after it\'s encrypted") do |output|
+			options["outfile"] = output.gsub("\"","")
+		end
+		opts.on("-p", "--password PASSWORD", "") do |pass|
+			options["password"] = pass
+		end
+		opts.on("-k","--key-file KEYFILE", "") do |keyfile|
+			options["key"] = keyfile
+		end
+		opts.on("-z", "--zip", "") do 
+			options["zip"] = true
+		end
+	end.parse!
+end
+password = ""
+
+if options["key"] != nil then
+	if options["password"] == nil then password_provided = false end
+	begin
+		options["password"] = rsa_key(options["key"], options["password"])
+	rescue
+		if options["infile"] != nil then
+			STDERR.print "What\'s the password?: "
+			password = STDIN.gets.chomp
+			options["password"] = rsa_key(options["key"],password)
+		else
+			STDERR.print "key file may be encrypted.  Enter the password either with\
+the -p option or read the file to be decrypted with the -i option"
+			# Considered reading the file to be decrypted in, but maybe getting a broken
+			# pipe error is more desirable
+			exit(1)
+		end
+	end
+end
+
+if options["infile"] == nil || options["infile"] == "-" then
+	file = ARGF
+	if options["password"] != nil then
+		password = options["password"]
+	end
+else
+	file = File.open(options["infile"],"rb")
+	if options["password"] != nil then
+		password = options["password"]
+	else
+		STDERR.print "What\'s the password?: "
+		password = STDIN.gets.chomp
+	end
+end
+string = file.read
+decrypted = string.decrypt(password,options["zip"])
+file.close
+if decrypted == nil then raise 'decryption failed!'; exit 3 end
+
+if options["outfile"] == nil || options["outfile"] == "-" then 
+	print decrypted
+	#puts "no file to output, wrote to screen"
+else
+	File.open(options["outfile"],"wb") {|f| f << decrypted }
+	#puts "opened file #{options["outfile"]} for output"
+end
