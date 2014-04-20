@@ -3,8 +3,7 @@ String open classed with AES-256 and RSA encryption and zipping methods for easy
 The string_encryption gem was started with the intention of being
 compatible with the RSA and AES algorithms used in a javascript
 library on http://www.pidder.com/pidcrypt .  Usage and testing
-against the pidcrypt library hasn't been done yet, but is scheduled
-for the future.
+against the pidcrypt library hasn't been done yet.
 The intent of this library is to make encryption and decryption of a 
 string as straight forward as capitalizing or reversing is.
 
